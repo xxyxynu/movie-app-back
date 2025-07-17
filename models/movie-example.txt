@@ -1,0 +1,32 @@
+const Movie = require('./models/Movie');
+
+const newMovie = new Movie({
+    title: "Inception",
+    genre: ["Sci-Fi", "Thriller"],
+    description: "A mind-bending thriller...",
+    releaseDate: new Date("2010-07-16"),
+    director: "Christopher Nolan",
+    cast: ["Leonardo DiCaprio", "Joseph Gordon-Levitt"],
+    duration: 148,
+    rating: 8.8,
+    posterUrl: "https://link-to-poster.jpg",
+    trailerUrl: "https://youtube.com/some-trailer"
+});
+
+await newMovie.save();
+
+
+
+🧠 获取评论 + 自动填充用户名和电影名
+js
+Копировать
+Редактировать
+const Review = require('./models/Review');
+
+const reviews = await Review.find()
+    .populate('userId', 'username')     // 只取 username
+    .populate('movieId', 'title')       // 只取 title
+    .sort({ createdAt: -1 })            // 最新的在前面
+    .limit(20);                         // 最多取 20 条
+
+console.log(reviews);
