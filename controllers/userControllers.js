@@ -134,7 +134,7 @@ const logout = asyncHandler(async (req, res) => {
 });
 
 const updateName = async (req, res) => {
-    const userId = req.user.id; // 用中间件提取了用户ID
+    const userId = req.user.id;
     const { username } = req.body;
 
     try {

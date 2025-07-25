@@ -25,42 +25,82 @@ const getRecommendedMovies = asyncHandler(async (req, res) => {
     const recommendedMovies = await Movie.find({
         _id: { $ne: currentMovie._id },
         genre: { $in: currentMovie.genre },
-    }).limit(10);
+    }).sort({ likes: -1 }).limit(10);
 
     res.status(200).json(recommendedMovies);
 });
 
-const likeMovie = asyncHandler(async (req, res) => {
-    const movie = await Movie.findByIdAndUpdate(
-        req.params.id,
-        { $inc: { likes: 1 } },
-        { new: true }
-    );
+const likeMovie = async (req, res) => {
+    const { id } = req.params;
+    const userId = req.user.id; // 从 auth middleware 拿用户 ID
 
-    if (!movie) {
-        res.status(404).json({ message: 'Movie not found' });
-        return;
+    try {
+        const movie = await Movie.findById(id);
+        if (!movie) return res.status(404).json({ message: 'Movie not found' });
+
+        // 如果用户已经点了赞，取消赞
+        if (movie.likedBy.includes(userId)) {
+            movie.likes -= 1;
+            movie.likedBy.pull(userId);
+        } else {
+            // 点赞之前先取消点踩
+            if (movie.dislikedBy.includes(userId)) {
+                movie.dislikes -= 1;
+                movie.dislikedBy.pull(userId);
+            }
+
+            movie.likes += 1;
+            movie.likedBy.push(userId);
+        }
+
+        await movie.save();
+        const updatedMovie = await Movie.findById(id);
+        res.json({
+            success: true,
+            likes: updatedMovie.likes,
+            dislikes: updatedMovie.dislikes,
+            computedRating: updatedMovie.computedRating
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Something went wrong' });
     }
+};
 
-    res.status(200).json({ likes: movie.likes });
-});
+const dislikeMovie = async (req, res) => {
+    const { id } = req.params;
+    const userId = req.user.id;
 
-const dislikeMovie = asyncHandler(async (req, res) => {
-    const movie = await Movie.findByIdAndUpdate(
-        req.params.id,
-        { $inc: { dislikes: 1 } },
-        { new: true }
-    );
+    try {
+        const movie = await Movie.findById(id);
+        if (!movie) return res.status(404).json({ message: 'Movie not found' });
 
-    if (!movie) {
-        res.status(404).json({ message: 'Movie not found' });
-        return;
+        if (movie.dislikedBy.includes(userId)) {
+            movie.dislikes -= 1;
+            movie.dislikedBy.pull(userId);
+        } else {
+            if (movie.likedBy.includes(userId)) {
+                movie.likes -= 1;
+                movie.likedBy.pull(userId);
+            }
+
+            movie.dislikes += 1;
+            movie.dislikedBy.push(userId);
+        }
+
+        await movie.save();
+        const updatedMovie = await Movie.findById(id);
+        res.json({
+            success: true,
+            likes: updatedMovie.likes,
+            dislikes: updatedMovie.dislikes,
+            computedRating: updatedMovie.computedRating
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Something went wrong' });
     }
-
-    res.status(200).json({ dislikes: movie.dislikes });
-});
-
-
+};
 
 module.exports = {
     getMovielist,
