@@ -20,7 +20,7 @@ const reviewSchema = new mongoose.Schema({
 });
 
 //添加联合唯一索引，防止重复评论
-reviewSchema.index({ userId: 1, movieId: 1 }, { unique: true });
+//reviewSchema.index({ userId: 1, movieId: 1 }, { unique: true });
 
 const Review = mongoose.model('Review', reviewSchema);
 

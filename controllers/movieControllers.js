@@ -1,5 +1,7 @@
 const asyncHandler = require('express-async-handler');
 const Movie = require('../models/movieModel');
+const User = require('../models/userModel');
+const { get } = require('mongoose');
 
 const getMovielist = asyncHandler(async (req, res) => {
     const movies = await Movie.find();
@@ -102,10 +104,47 @@ const dislikeMovie = async (req, res) => {
     }
 };
 
+const getUserRecommendations = asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+
+    // 1. 找到用户收藏的电影
+    const user = await User.findById(userId).populate('favoriteMovies');
+    if (!user || !user.favoriteMovies.length) {
+        return res.status(200).json([]); // 没收藏，返回空
+    }
+
+    // 2. 获取收藏电影的所有 genres
+    const favoriteGenres = [
+        ...new Set(user.favoriteMovies.flatMap(movie => movie.genre))
+    ];
+
+    // 3. 查找相同类型但用户没收藏的电影
+    const recommendedMovies = await Movie.find({
+        genre: { $in: favoriteGenres },
+        _id: { $nin: user.favoriteMovies.map(m => m._id) }
+    })
+        .sort({ likes: -1 })
+        .limit(10);
+
+    res.status(200).json(recommendedMovies);
+});
+
+const getPopularMovies = asyncHandler(async (req, res) => {
+    //const limit = parseInt(req.query.limit) || 10; // 允许前端传 limit
+    const popularMovies = await Movie.find()
+        .sort({ likes: -1, createdAt: -1 }) // 点赞多的优先，新电影优先
+        .limit(10);
+
+    res.status(200).json(popularMovies);
+});
+
+
 module.exports = {
     getMovielist,
     getMovie,
     getRecommendedMovies,
     likeMovie,
-    dislikeMovie
+    dislikeMovie,
+    getUserRecommendations,
+    getPopularMovies,
 }

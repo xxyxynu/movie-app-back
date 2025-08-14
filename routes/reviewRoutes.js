@@ -1,11 +1,12 @@
 const express = require('express')
 const { createReview, getReviewOfMovie, getReviewOfUser, deleteReview, updateReview } = require('../controllers/reviewControllers')
+const validateTokenHandler = require('../middleware/validateTokenHandler')
 
 const router = express.Router();
 
-router.post('/', createReview);
+router.post('/', validateTokenHandler, createReview);
 router.get('/movie/:movieId', getReviewOfMovie);
-router.get('/user/:userId', getReviewOfUser);
+router.get('/user', validateTokenHandler, getReviewOfUser);
 router.put('/:id', updateReview);
 router.delete('/:id', deleteReview);
 

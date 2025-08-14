@@ -4,35 +4,36 @@ const Review = require('../models/reviewModel')
 
 const createReview = asyncHandler(async (req, res) => {
     const { movieId, comment } = req.body;
-    const userId = req.user?._id || req.body.userId; // 根据是否有 auth middleware
+    const userId = req.user?.id || req.body.userId;
 
     if (!movieId || !comment) {
-        return res.status(400).json({
-            message: 'Movie ID and comment are required'
-        });
+        return res.status(400).json({ message: 'Movie ID and comment are required' });
     }
 
     const movie = await Movie.findById(movieId);
-
     if (!movie) {
-        return res.status(404).json({
-            message: 'Movie not found'
+        return res.status(404).json({ message: 'Movie not found' });
+    }
+
+    try {
+        const review = await Review.create({
+            movieId,
+            userId,
+            comment,
         });
+
+        return res.status(201).json(review);
+
+    } catch (error) {
+        if (error.code === 11000) {
+            return res.status(400).json({
+                message: 'You have already reviewed this movie',
+            });
+        }
+        throw error; // 其他错误继续抛出给 asyncHandler
     }
+});
 
-    const review = await Review.create({
-        movieId,
-        userId,
-        comment
-    });
-
-    res.status(201).json(review);
-
-    if (error.code === 11000) {
-        return res.status(400).json({ message: 'You have already reviewed this movie' });
-    }
-
-})
 
 const getReviewOfMovie = asyncHandler(async (req, res) => {
     const { movieId } = req.params;
@@ -45,10 +46,14 @@ const getReviewOfMovie = asyncHandler(async (req, res) => {
 });
 
 const getReviewOfUser = asyncHandler(async (req, res) => {
-    const { userId } = req.params;
+    const userId = req.user?.id;
+
+    if (!userId) {
+        return res.status(401).json({ message: 'User not authenticated' });
+    }
 
     const reviews = await Review.find({ userId })
-        .populate('movieId', 'title releaseDate')
+        .populate('movieId', 'title releaseDate posterUrl')
         .sort({ createdAt: -1 });
 
     res.json(reviews);
